@@ -1,0 +1,61 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Source repo ref (branch/tag/sha)"
+        required: false
+        default: "main"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "README.md"
+
+jobs:
+  windows:
+    name: windows (release artifact)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout workflow repo
+        uses: actions/checkout@v4
+
+      - name: Checkout source repo (private)
+        uses: actions/checkout@v4
+        with:
+          repository: FuChuZhao/agent-session-tui
+          ref: ${{ inputs.ref }}
+          path: source
+          ssh-key: ${{ secrets.SOURCE_REPO_SSH_KEY }}
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Test
+        run: cargo test
+        working-directory: source
+
+      - name: Build (release)
+        run: cargo build --release
+        working-directory: source
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $outDir = "dist"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          Copy-Item "source\\target\\release\\agent-session-tui.exe" $outDir -Force
+          Copy-Item "source\\README.md" $outDir -Force
+          Copy-Item "source\\LICENSE" $outDir -Force
+          Compress-Archive -Path "$outDir\\*" -DestinationPath "agent-session-tui-windows-x86_64.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-session-tui-windows-x86_64
+          path: agent-session-tui-windows-x86_64.zip
+          if-no-files-found: error
+
