@@ -7,11 +7,6 @@ on:
         description: "Source repo ref (branch/tag/sha)"
         required: false
         default: "main"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/**"
-      - "README.md"
 
 jobs:
   windows:
@@ -58,4 +53,4 @@ jobs:
           name: agent-session-tui-windows-x86_64
           path: agent-session-tui-windows-x86_64.zip
           if-no-files-found: error
-
+          retention-days: 1
